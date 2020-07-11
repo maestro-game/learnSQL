@@ -12,13 +12,37 @@ import java.util.List;
 
 public class StudentsRepositoryJdbcImpl implements StudentsRepository {
     private static final String //language=PostgreSQL
-            SQL_FIND_BY_ID = "select * from students where id = ";
+            SQL_FIND_BY_ID = "select students.id,\n" +
+            "       students.first_name,\n" +
+            "       students.last_name,\n" +
+            "       students.age,\n" +
+            "       students.group_number,\n" +
+            "       mentors.id         as mentor_id,\n" +
+            "       mentors.first_name as mentor_first_name,\n" +
+            "       mentors.last_name  as mentor_last_name,\n" +
+            "       mentors.subject_id\n" +
+            "from students\n" +
+            "         join\n" +
+            "     mentors\n" +
+            "     on students.id = mentors.student_id and students.id = ";
     private static final String //language=PostgreSQL
             SQL_SAVE_STUDENT = "insert into students values (default, '%s', '%s', %d, %d) returning id";
     private static final String //language=PostgreSQL
             SQL_UPDATE_STUDENT = "update students set first_name = '%s', last_name = '%s', age = %d, group_number = %d where id = %d";
     private static final String //language=PostgreSQL
-            SQL_FIND_ALL_BY_AGE = "select * from students where age = ";
+            SQL_FIND_ALL_BY_AGE = "select students.id,\n" +
+            "       students.first_name,\n" +
+            "       students.last_name,\n" +
+            "       students.age,\n" +
+            "       students.group_number,\n" +
+            "       mentors.id         as mentor_id,\n" +
+            "       mentors.first_name as mentor_first_name,\n" +
+            "       mentors.last_name  as mentor_last_name,\n" +
+            "       mentors.subject_id\n" +
+            "from students\n" +
+            "         join\n" +
+            "     mentors\n" +
+            "     on students.id = mentors.student_id and students.age = ";
     private static final String //language=PostgreSQL
             SQL_FIND_ALL = "select students.id,\n" +
             "       students.first_name,\n" +
@@ -40,44 +64,8 @@ public class StudentsRepositoryJdbcImpl implements StudentsRepository {
         this.connection = connection;
     }
 
-    @Override
-    public List<Student> findAllByAge(int age) {
-        Statement statement = null;
-        ResultSet resultSet = null;
-        List<Student> result = new LinkedList<>();
-        try {
-            statement = connection.createStatement();
-            resultSet = statement.executeQuery(SQL_FIND_ALL_BY_AGE + age);
-            while (resultSet.next()) {
-                result.add(new Student(resultSet.getLong("id"),
-                        resultSet.getString("first_name"),
-                        resultSet.getString("last_name"),
-                        resultSet.getInt("age"),
-                        resultSet.getInt("group_number")));
-            }
-            return result;
-        } catch (SQLException e) {
-            throw new IllegalArgumentException(e);
-        } finally {
-            if (resultSet != null) {
-                try {
-                    resultSet.close();
-                } catch (SQLException e) {
-                    //TODO handling
-                }
-            }
-            if (statement != null) {
-                try {
-                    statement.close();
-                } catch (SQLException e) {
-                    //TODO handling
-                }
-            }
-        }
-    }
 
-    @Override
-    public List<Student> findAll() {
+    public List<Student> findAllBySQL(String sql) {
         Statement statement = null;
         ResultSet resultSet = null;
         List<Student> result = new LinkedList<>();
@@ -85,7 +73,7 @@ public class StudentsRepositoryJdbcImpl implements StudentsRepository {
         Student current = null;
         try {
             statement = connection.createStatement();
-            resultSet = statement.executeQuery(SQL_FIND_ALL);
+            resultSet = statement.executeQuery(sql);
             while (resultSet.next()) {
                 if (resultSet.getInt("id") != prevId) {
                     if (current != null) {
@@ -128,20 +116,39 @@ public class StudentsRepositoryJdbcImpl implements StudentsRepository {
     }
 
     @Override
+    public List<Student> findAllByAge(int age) {
+        return findAllBySQL(SQL_FIND_ALL_BY_AGE + age);
+    }
+
+    @Override
+    public List<Student> findAll() {
+        return findAllBySQL(SQL_FIND_ALL);
+    }
+
+    @Override
     public Student findById(long id) {
         Statement statement = null;
         ResultSet resultSet = null;
+        Student result = null;
         try {
             statement = connection.createStatement();
             resultSet = statement.executeQuery(SQL_FIND_BY_ID + id);
-            if (resultSet.next()) {
-                return new Student(resultSet.getLong("id"),
-                        resultSet.getString("first_name"),
-                        resultSet.getString("last_name"),
-                        resultSet.getInt("age"),
-                        resultSet.getInt("group_number"));
-            } else return null;
-        } catch (SQLException e) {
+            while (resultSet.next()) {
+                if (result == null) {
+                    result = new Student(resultSet.getLong("id"),
+                            resultSet.getString("first_name"),
+                            resultSet.getString("last_name"),
+                            resultSet.getInt("age"),
+                            resultSet.getInt("group_number"));
+                }
+                result.getMentors().add(new Mentor(resultSet.getLong("mentor_id"),
+                        resultSet.getString("mentor_first_name"),
+                        resultSet.getString("mentor_last_name"),
+                        null)); //TODO correct student id
+            }
+            return result;
+        } catch (
+                SQLException e) {
             throw new IllegalArgumentException(e);
         } finally {
             if (resultSet != null) {
@@ -159,6 +166,7 @@ public class StudentsRepositoryJdbcImpl implements StudentsRepository {
                 }
             }
         }
+
     }
 
     @Override

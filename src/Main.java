@@ -13,7 +13,7 @@ public class Main {
     public static void main(String[] args) throws SQLException {
         Connection connection = DriverManager.getConnection(URL, USER, PASSWORD);
         StudentsRepository studentsRepository = new StudentsRepositoryJdbcImpl(connection);
-        studentsRepository.findAll();
+        Object res = studentsRepository.findAllByAge(25);
         connection.close();
     }
 }
