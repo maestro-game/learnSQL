@@ -65,7 +65,7 @@ public class StudentsRepositoryJdbcImpl implements StudentsRepository {
     }
 
 
-    public List<Student> findAllBySQL(String sql) {
+    private List<Student> findAllBySQL(String sql) {
         Statement statement = null;
         ResultSet resultSet = null;
         List<Student> result = new LinkedList<>();
